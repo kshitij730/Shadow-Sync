@@ -1,0 +1,7 @@
+{
+  "name": "ShadowSync",
+  "description": "A Real-Time Distributed Context Engine acting as a shared memory layer for AI systems. Visualizes context capture, vector embedding, and knowledge graph construction.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
