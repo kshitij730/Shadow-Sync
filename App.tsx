@@ -17,6 +17,15 @@ const App: React.FC = () => {
   const [links, setLinks] = useState<MemoryLink[]>([]);
   const [vectors, setVectors] = useState<VectorPoint[]>([]);
   const [events, setEvents] = useState<SystemEvent[]>([]);
+
+  // Real-time System Health State
+  const [systemHealth, setSystemHealth] = useState({
+    consistency: 99.999,
+    latency: 24,
+    replication: 3,
+    storageMB: 1.24,
+    memoryBuffer: 12
+  });
   
   // Agent State
   const [agentInput, setAgentInput] = useState('');
@@ -32,6 +41,50 @@ const App: React.FC = () => {
     setTimeout(() => addEvent('SYNC', 'Mesh active. 3 nodes connected.'), 1200);
   }, []);
 
+  // System Health Simulation Heartbeat
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setSystemHealth(prev => {
+        // Latency jitter based on processing state
+        const baseLatency = isProcessing ? 65 : 24;
+        const jitter = Math.floor(Math.random() * 15) - 5;
+        let newLatency = baseLatency + jitter;
+
+        // Memory buffer simulation (fills when processing, drains when idle)
+        let newBuffer = prev.memoryBuffer;
+        if (isProcessing) {
+          newBuffer = Math.min(98, newBuffer + (Math.random() * 15));
+        } else {
+          newBuffer = Math.max(8, newBuffer - (Math.random() * 5));
+        }
+
+        // Consistency micro-fluctuations (99.9xx%)
+        const newConsistency = 100 - (Math.random() * 0.005);
+
+        return {
+          ...prev,
+          latency: newLatency,
+          memoryBuffer: Math.floor(newBuffer),
+          consistency: parseFloat(newConsistency.toFixed(4))
+        };
+      });
+    }, 800);
+
+    return () => clearInterval(interval);
+  }, [isProcessing]);
+
+  // Update Storage calculation when data changes
+  useEffect(() => {
+    const baseSize = 1.24;
+    // Estimate size: 0.015MB per node, 0.005MB per vector
+    const calculatedSize = baseSize + (nodes.length * 0.015) + (vectors.length * 0.005);
+    
+    setSystemHealth(prev => ({
+      ...prev,
+      storageMB: parseFloat(calculatedSize.toFixed(3))
+    }));
+  }, [nodes.length, vectors.length]);
+
   const addEvent = (type: SystemEvent['type'], message: string) => {
     const newEvent: SystemEvent = {
       id: Math.random().toString(36).substr(2, 9),
@@ -45,6 +98,9 @@ const App: React.FC = () => {
 
   const handleIngest = async (text: string) => {
     setIsProcessing(true);
+    // Spike buffer immediately on ingest
+    setSystemHealth(prev => ({ ...prev, memoryBuffer: Math.min(100, prev.memoryBuffer + 25) }));
+    
     addEvent('CAPTURE', `Received context: "${text.substring(0, 30)}..."`);
 
     // Simulate pipeline delay
@@ -139,6 +195,13 @@ const App: React.FC = () => {
     );
   }
 
+  // Helper to determine buffer color
+  const getBufferColor = (val: number) => {
+    if (val > 80) return 'bg-neon-red';
+    if (val > 50) return 'bg-yellow-400';
+    return 'bg-neon-blue';
+  };
+
   return (
     <div className="h-screen w-screen bg-shadow-900 text-gray-200 flex overflow-hidden font-sans">
       
@@ -216,21 +279,32 @@ const App: React.FC = () => {
               <div className="col-span-1 rounded-xl overflow-hidden border border-shadow-600 shadow-2xl relative">
                  <VectorSpace vectors={vectors} />
               </div>
-              <div className="col-span-1 bg-shadow-800 rounded-xl border border-shadow-600 p-6 flex flex-col">
-                <h3 className="text-neon-green font-mono text-sm font-bold mb-4">SYSTEM_HEALTH</h3>
+              <div className="col-span-1 bg-shadow-800 rounded-xl border border-shadow-600 p-6 flex flex-col transition-all duration-300">
+                <h3 className="text-neon-green font-mono text-sm font-bold mb-4 flex items-center justify-between">
+                  <span>SYSTEM_HEALTH</span>
+                  <span className="flex h-2 w-2 relative">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-neon-green opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-neon-green"></span>
+                  </span>
+                </h3>
                 <div className="grid grid-cols-2 gap-4">
-                   <StatCard label="Consistency" value="99.9%" />
-                   <StatCard label="Latency" value="24ms" />
-                   <StatCard label="Replication" value="3/3 Nodes" />
-                   <StatCard label="Storage" value="1.2 MB" />
+                   <StatCard label="Consistency" value={`${systemHealth.consistency.toFixed(3)}%`} />
+                   <StatCard label="Latency" value={`${systemHealth.latency}ms`} />
+                   <StatCard label="Replication" value={`${systemHealth.replication}/3 Nodes`} />
+                   <StatCard label="Storage" value={`${systemHealth.storageMB} MB`} />
                 </div>
                 <div className="mt-auto pt-4 border-t border-shadow-700">
                   <div className="flex justify-between text-xs font-mono text-gray-500 mb-1">
-                    <span>MEMORY BUFFER</span>
-                    <span>42%</span>
+                    <span>MEMORY BUFFER IO</span>
+                    <span className={isProcessing ? 'text-neon-purple animate-pulse' : 'text-gray-400'}>
+                      {systemHealth.memoryBuffer}%
+                    </span>
                   </div>
                   <div className="w-full h-1 bg-shadow-900 rounded-full overflow-hidden">
-                    <div className="h-full bg-neon-blue w-[42%]"></div>
+                    <div 
+                      className={`h-full transition-all duration-700 ease-out ${getBufferColor(systemHealth.memoryBuffer)}`}
+                      style={{ width: `${systemHealth.memoryBuffer}%` }}
+                    ></div>
                   </div>
                 </div>
               </div>
