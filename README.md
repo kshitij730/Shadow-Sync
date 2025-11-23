@@ -2,7 +2,7 @@
 
 **ShadowSync** is a Real-Time Distributed Context Engine designed to give AI systems a shared memory, shared state, and shared understanding of user activity. It acts as the "central nervous system" for AI applications, bridging the gap between isolated interactions by capturing, transforming, embedding, and syncing context across a unified memory graph.
 
-![ShadowSync Dashboard](https://via.placeholder.com/1200x600?text=ShadowSync+Dashboard+Preview)
+![ShadowSync Dashboard](https://github.com/kshitij730/Shadow-Sync/blob/main/Dashboard%20img.png)
 
 ## 🚀 Mission
 
