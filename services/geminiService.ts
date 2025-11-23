@@ -5,6 +5,7 @@ const apiKey = process.env.API_KEY || '';
 const ai = new GoogleGenAI({ apiKey });
 
 // Schema for structured context extraction
+// UPDATED: Added 'required' fields to nested objects to prevent JSON generation errors
 const contextExtractionSchema: Schema = {
   type: Type.OBJECT,
   properties: {
@@ -15,7 +16,8 @@ const contextExtractionSchema: Schema = {
         properties: {
           name: { type: Type.STRING },
           type: { type: Type.STRING, description: "e.g., Person, Location, Concept, Event" }
-        }
+        },
+        required: ["name", "type"]
       }
     },
     relationships: {
@@ -26,7 +28,8 @@ const contextExtractionSchema: Schema = {
           source: { type: Type.STRING, description: "Must match an entity name" },
           target: { type: Type.STRING, description: "Must match an entity name" },
           relation: { type: Type.STRING, description: "e.g., lives in, works on, happened at" }
-        }
+        },
+        required: ["source", "target", "relation"]
       }
     },
     vectorCoordinates: {
@@ -36,7 +39,8 @@ const contextExtractionSchema: Schema = {
         x: { type: Type.NUMBER },
         y: { type: Type.NUMBER },
         category: { type: Type.STRING, description: "High level cluster name" }
-      }
+      },
+      required: ["x", "y", "category"]
     },
     summary: { type: Type.STRING }
   },
@@ -52,13 +56,21 @@ export const processContextInput = async (input: string): Promise<ProcessingResu
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash',
-      contents: `Analyze this user input for the ShadowSync Context Engine. 
-      Extract key entities, relationships for a knowledge graph, and generate pseudo-vector coordinates (-100 to 100) based on semantic meaning.
-      Input: "${input}"`,
+      contents: [
+        {
+          parts: [
+            {
+              text: `Analyze this user input for the ShadowSync Context Engine. 
+              Extract key entities, relationships for a knowledge graph, and generate pseudo-vector coordinates (-100 to 100) based on semantic meaning.
+              Input: "${input}"`
+            }
+          ]
+        }
+      ],
       config: {
         responseMimeType: "application/json",
         responseSchema: contextExtractionSchema,
-        temperature: 0.1 // Low temperature for consistent extraction
+        temperature: 0.1 
       }
     });
 
@@ -92,11 +104,19 @@ export const queryAgent = async (query: string, contextSummary: string): Promise
         If the answer isn't in the context, admit it but try to infer from what you know.
         Be concise, technical, and helpful.`,
       },
-      contents: `CONTEXT LOG:
-      ${contextSummary}
-      
-      USER QUERY:
-      ${query}`
+      contents: [
+        {
+          parts: [
+            {
+              text: `CONTEXT LOG:
+              ${contextSummary}
+              
+              USER QUERY:
+              ${query}`
+            }
+          ]
+        }
+      ]
     });
 
     return response.text || "No response generated.";
